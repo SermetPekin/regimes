@@ -54,10 +54,12 @@ class TestBasic:
 
     def test_strong_break_rejects(self, rng: np.random.Generator) -> None:
         """A very large mean shift should be detected by all three statistics."""
-        y = np.concatenate([
-            rng.standard_normal(100),
-            rng.standard_normal(100) + 10,
-        ])
+        y = np.concatenate(
+            [
+                rng.standard_normal(100),
+                rng.standard_normal(100) + 10,
+            ]
+        )
 
         test = AndrewsPlobergerTest(y)
         results = test.fit()
@@ -122,10 +124,12 @@ class TestStatistics:
 
     def test_large_for_strong_break(self, rng: np.random.Generator) -> None:
         """Statistics should be large for a strong break."""
-        y = np.concatenate([
-            rng.standard_normal(100),
-            rng.standard_normal(100) + 10,
-        ])
+        y = np.concatenate(
+            [
+                rng.standard_normal(100),
+                rng.standard_normal(100) + 10,
+            ]
+        )
 
         test = AndrewsPlobergerTest(y)
         results = test.fit()
@@ -243,9 +247,7 @@ class TestCriticalValues:
         ]:
             assert cv_dict[0.10] < cv_dict[0.05] < cv_dict[0.01]
 
-    def test_critical_values_vary_with_trimming(
-        self, rng: np.random.Generator
-    ) -> None:
+    def test_critical_values_vary_with_trimming(self, rng: np.random.Generator) -> None:
         """Critical values should differ for different trimming fractions."""
         y = rng.standard_normal(200)
 
@@ -281,9 +283,9 @@ class TestPValues:
         results = test.fit()
 
         # At least one p-value should be small
-        assert min(
-            results.sup_f_pvalue, results.exp_f_pvalue, results.ave_f_pvalue
-        ) < 0.10
+        assert (
+            min(results.sup_f_pvalue, results.exp_f_pvalue, results.ave_f_pvalue) < 0.10
+        )
 
     def test_large_pvalues_for_no_break(self, rng: np.random.Generator) -> None:
         """P-values should be large when there is no break."""
@@ -297,10 +299,12 @@ class TestPValues:
 
     def test_pvalues_consistent_with_cvs(self, rng: np.random.Generator) -> None:
         """P-values should be consistent with critical value comparison."""
-        y = np.concatenate([
-            rng.standard_normal(100),
-            rng.standard_normal(100) + 5,
-        ])
+        y = np.concatenate(
+            [
+                rng.standard_normal(100),
+                rng.standard_normal(100) + 5,
+            ]
+        )
 
         test = AndrewsPlobergerTest(y)
         results = test.fit()
@@ -336,9 +340,7 @@ class TestTrimming:
         assert results.trimming == trimming
         assert len(results.f_sequence) > 0
 
-    def test_narrower_trimming_more_candidates(
-        self, rng: np.random.Generator
-    ) -> None:
+    def test_narrower_trimming_more_candidates(self, rng: np.random.Generator) -> None:
         """Narrower trimming should produce more candidate dates."""
         y = rng.standard_normal(200)
 
@@ -578,10 +580,12 @@ class TestEdgeCases:
 
     def test_small_sample(self, rng: np.random.Generator) -> None:
         """Test with a small sample."""
-        y = np.concatenate([
-            rng.standard_normal(30),
-            rng.standard_normal(30) + 5,
-        ])
+        y = np.concatenate(
+            [
+                rng.standard_normal(30),
+                rng.standard_normal(30) + 5,
+            ]
+        )
 
         test = AndrewsPlobergerTest(y)
         results = test.fit(trimming=0.15)
@@ -608,10 +612,12 @@ class TestEdgeCases:
 
     def test_strong_break_all_reject(self, rng: np.random.Generator) -> None:
         """Very strong break should cause all three statistics to reject."""
-        y = np.concatenate([
-            rng.standard_normal(100),
-            rng.standard_normal(100) + 10,
-        ])
+        y = np.concatenate(
+            [
+                rng.standard_normal(100),
+                rng.standard_normal(100) + 10,
+            ]
+        )
 
         test = AndrewsPlobergerTest(y)
         results = test.fit()
@@ -620,10 +626,12 @@ class TestEdgeCases:
 
     def test_constant_only_model(self, rng: np.random.Generator) -> None:
         """Test with default constant-only (mean-shift) model."""
-        y = np.concatenate([
-            rng.standard_normal(100),
-            rng.standard_normal(100) + 3,
-        ])
+        y = np.concatenate(
+            [
+                rng.standard_normal(100),
+                rng.standard_normal(100) + 3,
+            ]
+        )
 
         test = AndrewsPlobergerTest(y)
         results = test.fit()
@@ -669,10 +677,12 @@ class TestPlot:
         """Test the standalone plot_f_sequence function."""
         import matplotlib.pyplot as plt
 
-        y = np.concatenate([
-            rng.standard_normal(100),
-            rng.standard_normal(100) + 3,
-        ])
+        y = np.concatenate(
+            [
+                rng.standard_normal(100),
+                rng.standard_normal(100) + 3,
+            ]
+        )
 
         test = AndrewsPlobergerTest(y)
         results = test.fit()

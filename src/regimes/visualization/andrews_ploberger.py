@@ -116,9 +116,7 @@ def plot_f_sequence(
             )
 
         # Zero line
-        ax.axhline(
-            y=0, color=REGIMES_COLORS["near_black"], linewidth=0.5, alpha=0.3
-        )
+        ax.axhline(y=0, color=REGIMES_COLORS["near_black"], linewidth=0.5, alpha=0.3)
 
         ax.set_title(title or "Andrews-Ploberger F-statistic sequence")
         ax.set_xlabel(xlabel)

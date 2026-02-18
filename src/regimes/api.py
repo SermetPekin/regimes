@@ -56,12 +56,12 @@ from regimes.tests import (
     AndrewsPlobergerTest,
     BaiPerronResults,
     BaiPerronTest,
+    ChowTest,
+    ChowTestResults,
     CUSUMResults,
     CUSUMSQResults,
     CUSUMSQTest,
     CUSUMTest,
-    ChowTest,
-    ChowTestResults,
 )
 
 # Visualization
@@ -71,8 +71,8 @@ from regimes.visualization import (
     plot_breaks,
     plot_cusum,
     plot_cusum_sq,
-    plot_f_sequence,
     plot_diagnostics,
+    plot_f_sequence,
     plot_params_over_time,
     plot_regime_means,
     plot_residual_acf,
@@ -84,24 +84,21 @@ from regimes.visualization import (
 __all__ = [
     "ADL",
     "AR",
-    # Models
     "OLS",
     "ADLResults",
+    "ARResults",
     "AndrewsPlobergerResults",
     "AndrewsPlobergerTest",
-    "ARResults",
     "BaiPerronResults",
-    # Tests
     "BaiPerronTest",
+    "BreakResultsBase",
     "CUSUMResults",
     "CUSUMSQResults",
     "CUSUMSQTest",
     "CUSUMTest",
     "ChowTest",
     "ChowTestResults",
-    "BreakResultsBase",
     "CovType",
-    # Diagnostics
     "DiagnosticTestResult",
     "DiagnosticsResults",
     "OLSResults",
@@ -111,7 +108,6 @@ __all__ = [
     "RecursiveARResults",
     "RecursiveOLS",
     "RecursiveOLSResults",
-    # Base classes
     "RegimesModelBase",
     "RegimesResultsBase",
     "RegressionResultsBase",
@@ -121,7 +117,6 @@ __all__ = [
     "RollingARResults",
     "RollingCovType",
     "RollingEstimatorBase",
-    # Rolling/Recursive estimation
     "RollingOLS",
     "RollingOLSResults",
     "RollingResultsBase",
@@ -130,12 +125,11 @@ __all__ = [
     "ar_summary_by_regime",
     "plot_actual_fitted",
     "plot_break_confidence",
-    # Visualization
     "plot_breaks",
-    "plot_f_sequence",
     "plot_cusum",
     "plot_cusum_sq",
     "plot_diagnostics",
+    "plot_f_sequence",
     "plot_params_over_time",
     "plot_regime_means",
     "plot_residual_acf",

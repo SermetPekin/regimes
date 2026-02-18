@@ -338,7 +338,9 @@ class AndrewsPlobergerResults(BreakTestResultsBase):
     exp_f_pvalue: float = np.nan
     ave_f_pvalue: float = np.nan
     f_sequence: np.ndarray = field(default_factory=lambda: np.array([]))
-    candidate_indices: np.ndarray = field(default_factory=lambda: np.array([], dtype=int))
+    candidate_indices: np.ndarray = field(
+        default_factory=lambda: np.array([], dtype=int)
+    )
     sup_f_break_index: int = 0
     trimming: float = 0.15
     q: int = 0
@@ -451,8 +453,7 @@ class AndrewsPlobergerResults(BreakTestResultsBase):
         lines.append("-" * 78)
         n_rejected = sum(1 for v in self.rejected.values() if v)
         lines.append(
-            f"\nRejected H0 for {n_rejected} of 3 statistics "
-            f"at the {alpha:.0%} level"
+            f"\nRejected H0 for {n_rejected} of 3 statistics at the {alpha:.0%} level"
         )
         lines.append("=" * 78)
         return "\n".join(lines)
@@ -834,9 +835,7 @@ class AndrewsPlobergerTest(BreakTestBase):
         # ExpF: use log-sum-exp trick for numerical stability
         half_f = 0.5 * f_sequence
         max_half_f = np.max(half_f)
-        exp_f = float(
-            max_half_f + np.log(np.mean(np.exp(half_f - max_half_f)))
-        )
+        exp_f = float(max_half_f + np.log(np.mean(np.exp(half_f - max_half_f))))
 
         # Break location
         sup_f_break_index = int(candidate_indices[np.argmax(f_sequence)])

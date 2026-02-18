@@ -32,7 +32,6 @@ from regimes.visualization.style import (
 __all__ = [
     "REGIMES_COLORS",
     "REGIMES_COLOR_CYCLE",
-    "plot_f_sequence",
     "add_break_dates",
     "add_confidence_band",
     "add_source",
@@ -44,6 +43,7 @@ __all__ = [
     "plot_cusum",
     "plot_cusum_sq",
     "plot_diagnostics",
+    "plot_f_sequence",
     "plot_params_over_time",
     "plot_regime_means",
     "plot_residual_acf",
