@@ -423,27 +423,26 @@ class BaiPerronTest(BreakTestBase):
             
             # We need to separate the constant from other regressors
             # Check if constant exists in exog_all
-            has_const = False
-            const_idx = -1
+            # Find ALL constant columns (there may be duplicates)
+            const_indices: list[int] = []
             
             for i in range(exog_all.shape[1]):
                 # Check for constant column (all ones)
                 # We use a loose tolerance because of potential floating point issues
                 if np.allclose(exog_all[:, i], 1.0, atol=1e-5):
-                    has_const = True
-                    const_idx = i
-                    break
+                    const_indices.append(i)
             
-            if has_const:
-                # Remove constant from exog (non-breaking)
-                non_breaking_indices = [i for i in range(exog_all.shape[1]) if i != const_idx]
+            if const_indices:
+                # Remove all constant columns from exog (non-breaking)
+                non_breaking_indices = [
+                    i for i in range(exog_all.shape[1]) if i not in const_indices
+                ]
                 if non_breaking_indices:
                     exog_non_break = exog_all[:, non_breaking_indices]
                 else:
                     exog_non_break = None
                 
-                # exog_break will be the constant (default in __init__ if None)
-                # But we can pass it explicitly to be safe
+                # exog_break will be a single constant column
                 exog_break = np.ones((len(endog), 1))
                 
                 return cls(endog, exog=exog_non_break, exog_break=exog_break)
@@ -799,21 +798,30 @@ class BaiPerronTest(BreakTestBase):
 
         # Pre-compute SSR matrix
         # If we have non-breaking regressors (partial structural change),
-        # we need to use the recursive procedure from Bai & Perron (2003).
-        # However, for simplicity and efficiency in this implementation,
-        # we can use the partialling-out approach if p is small.
-        
-        # Current implementation assumes pure structural change (all coeffs break)
-        # or uses the provided exog as if it breaks within each segment.
-        # This is the "pure structural change" model applied to all variables.
-        
-        # To correctly handle partial structural change (some coeffs fixed),
-        # we should ideally iterate. But as a first approximation or if p=0,
-        # we just compute SSRs.
+        # we need to use the iterative procedure from Bai & Perron (2003).
+        #
+        # Partial structural change model — Bai & Perron (2003), Section 3
+        # ----------------------------------------------------------------
+        # The model is:
+        #     y_t = x_t' * beta + z_t' * delta_j + e_t,  t in regime j
+        #
+        # where beta are fixed (non-breaking) coefficients on x_t (self.exog),
+        # and delta_j are regime-specific coefficients on z_t (self.exog_break).
+        #
+        # Estimation follows a concentrating / iterative scheme:
+        #   1. Given current beta_hat, compute y* = y - X * beta_hat.
+        #   2. Apply dynamic programming to y* on Z to find optimal breaks
+        #      and regime-specific delta_j estimates.
+        #   3. Construct the full design matrix (Z_bar | X) and re-estimate
+        #      all coefficients jointly.
+        #   4. Update beta_hat from step 3 and repeat until convergence.
+        #
+        # When p = 0 (pure structural change), no iteration is needed and the
+        # standard Bai-Perron dynamic programming algorithm is used directly.
         
         if self.p > 0:
             # Partial structural change model
-            # We use an iterative procedure based on Bai & Perron (2003).
+            # Iterative procedure per Bai & Perron (2003), Section 3.
             
             # Initial estimate of fixed coefficients (assuming no breaks)
             X_full = []
@@ -851,7 +859,10 @@ class BaiPerronTest(BreakTestBase):
                 
                 for _ in range(10): # 10 iterations usually enough for convergence
                     # 1. Partial out fixed regressors
-                    y_star = self.endog - self.exog @ curr_beta_fixed
+                    if self.exog is not None:
+                        y_star = self.endog - self.exog @ curr_beta_fixed
+                    else:
+                        y_star = self.endog
                     
                     # 2. Find optimal breaks for y_star on exog_break
                     # We pass x=self.exog_break to override default behavior
