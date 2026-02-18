@@ -11,6 +11,7 @@ A Python package for structural break detection and estimation in time-series ec
 
 - **Structural Break Tests**: Bai-Perron test for multiple structural breaks with Sup-F, UDmax, and sequential testing procedures
 - **Chow Test**: Test for structural breaks at known break points with standard and predictive variants
+- **CUSUM Tests**: CUSUM and CUSUM-SQ tests for parameter and variance instability (Brown, Durbin, Evans, 1975)
 - **Time-Series Models**: AR, ADL, OLS with HAC standard errors and known break support
 - **ADL Models**: Autoregressive Distributed Lag models with flexible lag specification and distributed lag diagnostics
 - **Rolling & Recursive Estimation**: Track parameter evolution with fixed or expanding windows
@@ -117,6 +118,50 @@ print(results.summary())
 model = rg.OLS(y, np.ones((200, 1)), has_constant=False)
 results = model.chow_test(break_points=[80, 100])
 print(results.summary())
+```
+
+### Testing for Parameter Instability (CUSUM)
+
+The **CUSUM test** (Brown, Durbin, Evans, 1975) detects parameter instability without requiring a known break date. The **CUSUM-SQ** variant detects changes in variance:
+
+```python
+import numpy as np
+import regimes as rg
+
+# Simulate data with a mean shift
+np.random.seed(42)
+y = np.concatenate([
+    np.random.randn(100),      # regime 1: mean = 0
+    np.random.randn(100) + 2,  # regime 2: mean = 2
+])
+
+# CUSUM test for parameter instability
+cusum_test = rg.CUSUMTest(y)
+cusum_results = cusum_test.fit(significance=0.05)
+print(cusum_results.summary())
+fig, ax = cusum_results.plot()
+```
+
+CUSUM-SQ for variance instability:
+
+```python
+# Simulate data with a variance change
+rng = np.random.default_rng(42)
+y_var = np.concatenate([rng.normal(0, 1, 100), rng.normal(0, 3, 100)])
+
+# CUSUM-SQ test for variance instability
+cusumsq_results = rg.CUSUMSQTest(y_var).fit(significance=0.05)
+print(cusumsq_results.summary())
+fig, ax = cusumsq_results.plot()
+```
+
+Or use the convenience method on any model:
+
+```python
+model = rg.OLS(y, np.ones((200, 1)), has_constant=False)
+cusum_from_model = model.cusum_test()
+print(cusum_from_model.summary())
+fig, ax = cusum_from_model.plot()
 ```
 
 ### OLS with HAC Standard Errors
@@ -326,6 +371,8 @@ fig, axes = rg.plot_residual_acf(results, nlags=15)
 All models (`OLS`, `AR`, `ADL`) have:
 - `.bai_perron()` method for integrated break detection
 - `.chow_test(break_points)` method for testing breaks at known dates
+- `.cusum_test()` method for CUSUM parameter instability test
+- `.cusum_sq_test()` method for CUSUM-SQ variance instability test
 - `.rolling(window)` method for rolling window estimation
 - `.recursive(min_nobs)` method for recursive (expanding window) estimation
 
@@ -354,12 +401,15 @@ All models (`OLS`, `AR`, `ADL`) have:
 |-------|-------------|
 | `BaiPerronTest` | Bai-Perron test for multiple structural breaks |
 | `ChowTest` | Chow test for breaks at known break points (standard and predictive) |
+| `CUSUMTest` | CUSUM test for parameter instability via recursive residuals |
+| `CUSUMSQTest` | CUSUM-of-squares test for variance instability |
 
 **Key methods:**
 - `BaiPerronTest.from_model(model)` - Create test from OLS or AR model
 - `BaiPerronResults.to_ols()` - Convert results to OLS with detected breaks
 - `ChowTest.from_model(model)` - Create test from OLS, AR, or ADL model
 - `.chow_test(break_points)` - Convenience method on all model classes
+- `.cusum_test()` / `.cusum_sq_test()` - Convenience methods on all model classes
 
 ### Visualization
 
@@ -375,6 +425,8 @@ All models (`OLS`, `AR`, `ADL`) have:
 | `plot_scaled_residuals` | Vertical index plot of residuals/σ |
 | `plot_residual_distribution` | Histogram with N(0,1) overlay |
 | `plot_residual_acf` | ACF and PACF bar plots |
+| `plot_cusum` | CUSUM statistic with critical boundaries |
+| `plot_cusum_sq` | CUSUM-SQ statistic with critical boundaries |
 
 ### Style Utilities
 
@@ -400,7 +452,7 @@ All regression models support multiple covariance estimators:
 
 ## Testing
 
-The package includes a comprehensive test suite with 88% coverage (588 tests):
+The package includes a comprehensive test suite with 88% coverage (662 tests):
 
 ```bash
 # Run all tests
@@ -428,6 +480,7 @@ regimes uses [Hypothesis](https://hypothesis.readthedocs.io/) for property-based
 
 - Bai, J., & Perron, P. (1998). Estimating and testing linear models with multiple structural changes. *Econometrica*, 66(1), 47-78.
 - Bai, J., & Perron, P. (2003). Computation and analysis of multiple structural change models. *Journal of Applied Econometrics*, 18(1), 1-22.
+- Brown, R. L., Durbin, J., & Evans, J. M. (1975). Techniques for testing the constancy of regression relationships over time. *Journal of the Royal Statistical Society: Series B*, 37(2), 149-192.
 - Chow, G. C. (1960). Tests of equality between sets of coefficients in two linear regressions. *Econometrica*, 28(3), 591-605.
 
 ## License

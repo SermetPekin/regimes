@@ -20,6 +20,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `.chow_test()` convenience method on OLS, AR, and ADL models
   - Partial coefficient testing via `exog` vs `exog_break` split
   - 48 new tests across 11 test classes
+- **CUSUM and CUSUM-SQ tests for parameter and variance instability**
+  - `CUSUMTest` class: cumulative sum of recursive residuals (Brown, Durbin, Evans, 1975)
+  - `CUSUMSQTest` class: cumulative sum of squared recursive residuals for variance instability
+  - `CUSUMResults` / `CUSUMSQResults` dataclasses with statistic path, boundaries, summary
+  - Recursive residual computation via Sherman-Morrison-Woodbury updating
+  - `plot_cusum()` and `plot_cusum_sq()` visualization functions
+  - `.cusum_test()` and `.cusum_sq_test()` convenience methods on OLS, AR, and ADL models
+  - `.plot()` convenience method on results objects
+  - 74 new tests (662 total)
 
 ### Changed
 

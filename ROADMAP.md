@@ -52,7 +52,7 @@ Core package structure, OLS/AR models, Bai-Perron test, basic visualization, CI/
 ### Phase 3: v0.3.0 - Structural Break Tests & Markov-Switching
 
 - [x] Chow test
-- [ ] CUSUM / CUSUM-SQ tests
+- [x] CUSUM / CUSUM-SQ tests
 - [ ] Andrews-Ploberger test
 - [ ] Unit root tests (ADF, KPSS, Phillips-Perron)
 - [ ] Markov-switching models
@@ -92,7 +92,6 @@ These features are deferred and may be added in future versions based on need:
 
 - Full covariance support (HC1-HC3, HAC) for rolling estimation
 - Rolling residual diagnostics
-- Recursive CUSUM statistics
 - Rolling forecasts
 - Forecast-error regression class (moved to separate paper-specific package)
 
@@ -102,7 +101,7 @@ These features are deferred and may be added in future versions based on need:
 |---------|--------|-------------|
 | 0.1.0 | Complete | Foundation: OLS, AR, Bai-Perron, visualization, CI/CD |
 | 0.2.0 | Complete | Estimation tools: rolling/recursive, ADL, diagnostics, style system, 88% coverage |
-| 0.3.0 | Planned | Structural break tests (Chow, CUSUM, Andrews-Ploberger), Markov-switching |
+| 0.3.0 | In Progress | Structural break tests (Chow ✓, CUSUM ✓, Andrews-Ploberger), Markov-switching |
 | 0.4.0 | Planned | Autometrics-inspired model selection, step-indicator saturation |
 | 0.5.0 | Planned | Real data examples, example notebooks, Sphinx docs, PyPI stable release |
 | 0.6.0 | Planned | Advanced models: VAR, cointegration, panel data, bootstrap |
