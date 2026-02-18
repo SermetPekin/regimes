@@ -12,6 +12,7 @@ A Python package for structural break detection and estimation in time-series ec
 - **Structural Break Tests**: Bai-Perron test for multiple structural breaks with Sup-F, UDmax, and sequential testing procedures
 - **Chow Test**: Test for structural breaks at known break points with standard and predictive variants
 - **CUSUM Tests**: CUSUM and CUSUM-SQ tests for parameter and variance instability (Brown, Durbin, Evans, 1975)
+- **Andrews-Ploberger Test**: SupF, ExpF, and AveF tests for a structural break at unknown date (Andrews, 1993; Andrews & Ploberger, 1994)
 - **Time-Series Models**: AR, ADL, OLS with HAC standard errors and known break support
 - **ADL Models**: Autoregressive Distributed Lag models with flexible lag specification and distributed lag diagnostics
 - **Rolling & Recursive Estimation**: Track parameter evolution with fixed or expanding windows
@@ -162,6 +163,32 @@ model = rg.OLS(y, np.ones((200, 1)), has_constant=False)
 cusum_from_model = model.cusum_test()
 print(cusum_from_model.summary())
 fig, ax = cusum_from_model.plot()
+```
+
+### Testing for a Break at Unknown Date (Andrews-Ploberger)
+
+The **Andrews-Ploberger test** tests for a single structural break at an unknown date, reporting three statistics (SupF, ExpF, AveF) with different power properties:
+
+```python
+import numpy as np
+import regimes as rg
+
+# Simulate data with a mean shift
+rng = np.random.default_rng(42)
+y = np.concatenate([rng.normal(0, 1, 100), rng.normal(3, 1, 100)])
+
+# Andrews-Ploberger test
+results = rg.AndrewsPlobergerTest(y).fit()
+print(results.summary())
+fig, ax = results.plot()
+```
+
+Or use the convenience method on any model:
+
+```python
+model = rg.OLS(y, np.ones((200, 1)), has_constant=False)
+ap_results = model.andrews_ploberger()
+print(ap_results.summary())
 ```
 
 ### OLS with HAC Standard Errors
@@ -373,6 +400,7 @@ All models (`OLS`, `AR`, `ADL`) have:
 - `.chow_test(break_points)` method for testing breaks at known dates
 - `.cusum_test()` method for CUSUM parameter instability test
 - `.cusum_sq_test()` method for CUSUM-SQ variance instability test
+- `.andrews_ploberger()` method for testing breaks at unknown date
 - `.rolling(window)` method for rolling window estimation
 - `.recursive(min_nobs)` method for recursive (expanding window) estimation
 
@@ -403,6 +431,7 @@ All models (`OLS`, `AR`, `ADL`) have:
 | `ChowTest` | Chow test for breaks at known break points (standard and predictive) |
 | `CUSUMTest` | CUSUM test for parameter instability via recursive residuals |
 | `CUSUMSQTest` | CUSUM-of-squares test for variance instability |
+| `AndrewsPlobergerTest` | Andrews-Ploberger SupF/ExpF/AveF test for break at unknown date |
 
 **Key methods:**
 - `BaiPerronTest.from_model(model)` - Create test from OLS or AR model
@@ -410,6 +439,8 @@ All models (`OLS`, `AR`, `ADL`) have:
 - `ChowTest.from_model(model)` - Create test from OLS, AR, or ADL model
 - `.chow_test(break_points)` - Convenience method on all model classes
 - `.cusum_test()` / `.cusum_sq_test()` - Convenience methods on all model classes
+- `AndrewsPlobergerTest.from_model(model)` - Create test from OLS, AR, or ADL model
+- `.andrews_ploberger()` - Convenience method on all model classes
 
 ### Visualization
 
@@ -427,6 +458,7 @@ All models (`OLS`, `AR`, `ADL`) have:
 | `plot_residual_acf` | ACF and PACF bar plots |
 | `plot_cusum` | CUSUM statistic with critical boundaries |
 | `plot_cusum_sq` | CUSUM-SQ statistic with critical boundaries |
+| `plot_f_sequence` | Andrews-Ploberger F-statistic sequence with critical value line |
 
 ### Style Utilities
 
@@ -452,7 +484,7 @@ All regression models support multiple covariance estimators:
 
 ## Testing
 
-The package includes a comprehensive test suite with 88% coverage (662 tests):
+The package includes a comprehensive test suite with 88% coverage (718 tests):
 
 ```bash
 # Run all tests
@@ -482,6 +514,8 @@ regimes uses [Hypothesis](https://hypothesis.readthedocs.io/) for property-based
 - Bai, J., & Perron, P. (2003). Computation and analysis of multiple structural change models. *Journal of Applied Econometrics*, 18(1), 1-22.
 - Brown, R. L., Durbin, J., & Evans, J. M. (1975). Techniques for testing the constancy of regression relationships over time. *Journal of the Royal Statistical Society: Series B*, 37(2), 149-192.
 - Chow, G. C. (1960). Tests of equality between sets of coefficients in two linear regressions. *Econometrica*, 28(3), 591-605.
+- Andrews, D. W. K. (1993). Tests for parameter instability and structural change with unknown change point. *Econometrica*, 61(4), 821-856.
+- Andrews, D. W. K. & Ploberger, W. (1994). Optimal tests when a nuisance parameter is present only under the alternative. *Econometrica*, 62(6), 1383-1414.
 
 ## License
 

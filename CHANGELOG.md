@@ -29,6 +29,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `.cusum_test()` and `.cusum_sq_test()` convenience methods on OLS, AR, and ADL models
   - `.plot()` convenience method on results objects
   - 74 new tests (662 total)
+- **Andrews-Ploberger test for structural breaks at unknown date**
+  - `AndrewsPlobergerTest` class with SupF, ExpF, and AveF statistics (Andrews, 1993; Andrews & Ploberger, 1994)
+  - `AndrewsPlobergerResults` dataclass with critical values, coarse p-values, and F-sequence
+  - Critical value tables for q=1–10, trimming 0.05–0.20
+  - `plot_f_sequence()` visualization function for F-statistic path
+  - `AndrewsPlobergerTest.from_model()` class method for OLS, AR, and ADL models
+  - `.andrews_ploberger()` convenience method on OLS, AR, and ADL models
+  - 56 new tests (718 total)
 
 ### Changed
 

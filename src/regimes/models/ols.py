@@ -26,6 +26,7 @@ if TYPE_CHECKING:
     from numpy.typing import ArrayLike, NDArray
 
     from regimes.rolling.ols import RecursiveOLS, RollingOLS
+    from regimes.tests.andrews_ploberger import AndrewsPlobergerResults
     from regimes.tests.bai_perron import BaiPerronResults
     from regimes.tests.chow import ChowTestResults
     from regimes.tests.cusum import CUSUMResults, CUSUMSQResults
@@ -856,6 +857,44 @@ class OLS(RegimesModelBase):
 
         test = CUSUMSQTest.from_model(self)
         return test.fit(significance=significance)
+
+    def andrews_ploberger(
+        self,
+        break_vars: Literal["all", "const"] = "all",
+        trimming: float = 0.15,
+        significance: float = 0.05,
+    ) -> AndrewsPlobergerResults:
+        """Test for a structural break at unknown date using Andrews-Ploberger.
+
+        Convenience method that creates an AndrewsPlobergerTest from this
+        model and runs it. Reports SupF, ExpF, and AveF statistics.
+
+        Parameters
+        ----------
+        break_vars : "all" | "const"
+            Which variables can have breaks:
+            - "all": All regressors can break (default)
+            - "const": Only intercept can break (mean-shift model)
+        trimming : float
+            Fraction of observations trimmed from each end. Default is 0.15.
+        significance : float
+            Significance level for rejection decisions. Default is 0.05.
+
+        Returns
+        -------
+        AndrewsPlobergerResults
+            Test results with SupF, ExpF, AveF statistics and decisions.
+
+        See Also
+        --------
+        AndrewsPlobergerTest : The underlying test class.
+        chow_test : Test at known break points.
+        bai_perron : Test for multiple breaks.
+        """
+        from regimes.tests.andrews_ploberger import AndrewsPlobergerTest
+
+        test = AndrewsPlobergerTest.from_model(self, break_vars=break_vars)
+        return test.fit(trimming=trimming, significance=significance)
 
     def rolling(self, window: int) -> RollingOLS:
         """Create a rolling OLS estimator from this model.

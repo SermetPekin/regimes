@@ -52,6 +52,8 @@ from regimes.rolling import (
 
 # Tests
 from regimes.tests import (
+    AndrewsPlobergerResults,
+    AndrewsPlobergerTest,
     BaiPerronResults,
     BaiPerronTest,
     CUSUMResults,
@@ -69,6 +71,7 @@ from regimes.visualization import (
     plot_breaks,
     plot_cusum,
     plot_cusum_sq,
+    plot_f_sequence,
     plot_diagnostics,
     plot_params_over_time,
     plot_regime_means,
@@ -84,6 +87,8 @@ __all__ = [
     # Models
     "OLS",
     "ADLResults",
+    "AndrewsPlobergerResults",
+    "AndrewsPlobergerTest",
     "ARResults",
     "BaiPerronResults",
     # Tests
@@ -127,6 +132,7 @@ __all__ = [
     "plot_break_confidence",
     # Visualization
     "plot_breaks",
+    "plot_f_sequence",
     "plot_cusum",
     "plot_cusum_sq",
     "plot_diagnostics",

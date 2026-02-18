@@ -1,5 +1,6 @@
 """Visualization utilities for structural break analysis."""
 
+from regimes.visualization.andrews_ploberger import plot_f_sequence
 from regimes.visualization.breaks import (
     plot_break_confidence,
     plot_breaks,
@@ -31,6 +32,7 @@ from regimes.visualization.style import (
 __all__ = [
     "REGIMES_COLORS",
     "REGIMES_COLOR_CYCLE",
+    "plot_f_sequence",
     "add_break_dates",
     "add_confidence_band",
     "add_source",
