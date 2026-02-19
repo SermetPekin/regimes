@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+*No unreleased changes.*
+
+## [0.3.0] - 2026-02-19
+
 ### Added
 
 - **GitHub repository**: Published at [github.com/knightianuncertainty/regimes](https://github.com/knightianuncertainty/regimes)
@@ -51,6 +55,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `.markov_switching(k_regimes)` convenience method on `OLS`, `AR`, and `ADL` for one-step conversion to Markov switching
   - `MarkovRegression.from_model()`, `MarkovAR.from_model()`, `MarkovADL.from_model()` class methods for explicit construction from existing models
   - 98 new tests (816 total)
+- **Example notebooks**: Replaced monolithic `exploration.ipynb` with 4 focused notebooks
+  - `01_models_and_visualization.ipynb` — OLS, AR, visualization, diagnostics
+  - `02_structural_break_tests.ipynb` — Bai-Perron, Chow, CUSUM, Andrews-Ploberger
+  - `03_dynamic_estimation.ipynb` — Rolling/recursive estimation, ADL models
+  - `04_markov_switching.ipynb` — Full Markov switching API demonstration
+- **Expanded test coverage**: Additional edge case and integration tests (877 tests total, 86% coverage)
+  - Markov regression, AR, utils, restricted, selection, sequential restriction tests
+  - Results base class tests
+  - Markov visualization tests
 
 ### Changed
 

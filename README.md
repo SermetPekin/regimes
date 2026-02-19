@@ -557,7 +557,7 @@ All regression models support multiple covariance estimators:
 
 ## Testing
 
-The package includes a comprehensive test suite with 816 tests:
+The package includes a comprehensive test suite with 877 tests:
 
 ```bash
 # Run all tests

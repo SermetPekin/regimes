@@ -2,7 +2,7 @@
 
 ## Current Status
 
-**Phase 2: v0.2.0 - Estimation Tools** Complete — [github.com/knightianuncertainty/regimes](https://github.com/knightianuncertainty/regimes)
+**Phase 3: v0.3.0 - Structural Break Tests & Markov-Switching** Complete — [github.com/knightianuncertainty/regimes](https://github.com/knightianuncertainty/regimes)
 
 ## Completed Phases
 
@@ -116,7 +116,7 @@ These features are deferred and may be added in future versions based on need:
 |---------|--------|-------------|
 | 0.1.0 | Complete | Foundation: OLS, AR, Bai-Perron, visualization, CI/CD |
 | 0.2.0 | Complete | Estimation tools: rolling/recursive, ADL, diagnostics, style system, 88% coverage |
-| 0.3.0 | In Progress | Structural break tests (Chow ✓, CUSUM ✓, Andrews-Ploberger ✓), Markov-switching ✓, 877 tests (86% coverage), 4 example notebooks |
+| 0.3.0 | Complete | Structural break tests (Chow, CUSUM, Andrews-Ploberger), Markov-switching, 877 tests (86% coverage), 4 example notebooks |
 | 0.4.0 | Planned | Autometrics-inspired model selection, step-indicator saturation |
 | 0.5.0 | Planned | Real data examples, example notebooks, Sphinx docs, PyPI stable release |
 | 0.6.0 | Planned | Advanced models: VAR, cointegration, panel data, bootstrap |
