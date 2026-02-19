@@ -21,6 +21,11 @@ from statsmodels.tsa.regime_switching.markov_autoregression import (
 from statsmodels.tsa.regime_switching.markov_regression import (
     MarkovRegression as SMMarkovRegression,
 )
+from statsmodels.tsa.regime_switching.markov_switching import (
+    prefix_hamilton_filter_log_map,
+    prefix_kim_smoother_log_map,
+)
+from statsmodels.tsa.statespace.tools import find_best_blas_type
 
 from regimes.markov.models import (
     MarkovAR,
@@ -35,6 +40,13 @@ if TYPE_CHECKING:
         MarkovRegressionResults,
     )
 
+# Effectively zero in log-space.  statsmodels uses log(max(p, 1e-20)) ≈ -46
+# which leaks ~1e-20 probability per step.  Over ~100 steps with strong data
+# (likelihood ratio ~10^4/step) the leakage overwhelms the restriction.
+# Using -1000 instead eliminates the leakage while avoiding NaN issues that
+# -inf would cause in the smoother's backward pass ((-inf) - (-inf) = NaN).
+_LOG_ZERO = -1000.0
+
 
 def _softmax(x: NDArray[Any]) -> NDArray[Any]:
     """Numerically stable softmax."""
@@ -48,11 +60,207 @@ def _inverse_softmax(p: NDArray[Any]) -> NDArray[Any]:
     return np.log(p)
 
 
-class _RestrictedSMMarkovRegression(SMMarkovRegression):
+class _RestrictedFilterMixin:
+    """Mixin providing filter/smooth overrides that enforce exact zeros in log-space.
+
+    statsmodels' ``cy_hamilton_filter_log`` and ``cy_kim_smoother_log`` convert
+    zero transition probabilities to ``log(max(0, 1e-20)) ≈ -46``.  This tiny
+    leakage accumulates exponentially when the data strongly favour the
+    "forbidden" regime, eventually overwhelming the restriction.  This mixin
+    replaces that conversion with ``_LOG_ZERO = -1000`` for any entry that is
+    exactly zero in the transition matrix.
+    """
+
+    _restrictions: dict[tuple[int, int], float]
+
+    @staticmethod
+    def _restricted_log_transition(
+        regime_transition: NDArray[Any],
+    ) -> NDArray[Any]:
+        """Convert transition matrix to log-space with exact zeros."""
+        return np.where(
+            regime_transition == 0,
+            _LOG_ZERO,
+            np.log(np.maximum(regime_transition, 1e-20)),
+        )
+
+    def _filter(
+        self, params: NDArray[Any], regime_transition: NDArray[Any] | None = None
+    ) -> tuple[Any, ...]:
+        if not self._restrictions:
+            return super()._filter(params, regime_transition)  # type: ignore[misc]
+
+        # Replicate cy_hamilton_filter_log with our strict log-zero
+        if regime_transition is None:
+            regime_transition = self.regime_transition_matrix(params)  # type: ignore[attr-defined]
+        initial_probabilities = self.initial_probabilities(  # type: ignore[attr-defined]
+            params, regime_transition
+        )
+        conditional_loglikelihoods = self._conditional_loglikelihoods(params)  # type: ignore[attr-defined]
+
+        # --- begin cy_hamilton_filter_log logic with restricted log ---
+        k_regimes = len(initial_probabilities)
+        nobs = conditional_loglikelihoods.shape[-1]
+        order = conditional_loglikelihoods.ndim - 2
+        dtype = conditional_loglikelihoods.dtype
+
+        log_initial = np.log(initial_probabilities)
+        log_transition = self._restricted_log_transition(regime_transition)
+
+        filtered_marginal_probabilities = np.zeros(
+            (k_regimes, nobs), dtype=dtype
+        )
+        predicted_joint_probabilities = np.zeros(
+            (k_regimes,) * (order + 1) + (nobs,), dtype=dtype
+        )
+        joint_loglikelihoods = np.zeros((nobs,), dtype=dtype)
+        filtered_joint_probabilities = np.zeros(
+            (k_regimes,) * (order + 1) + (nobs + 1,), dtype=dtype
+        )
+
+        filtered_marginal_probabilities[:, 0] = log_initial
+        tmp = np.copy(log_initial)
+        shape = (k_regimes, k_regimes)
+        transition_t = 0
+        for i in range(order):
+            if log_transition.shape[-1] > 1:
+                transition_t = i
+            tmp = (
+                np.reshape(log_transition[..., transition_t], shape + (1,) * i)
+                + tmp
+            )
+        filtered_joint_probabilities[..., 0] = tmp
+
+        if log_transition.shape[-1] > 1:
+            log_transition = log_transition[..., self.order :]  # type: ignore[attr-defined]
+
+        prefix, dtype_blas, _ = find_best_blas_type(
+            (
+                log_transition,
+                conditional_loglikelihoods,
+                joint_loglikelihoods,
+                predicted_joint_probabilities,
+                filtered_joint_probabilities,
+            )
+        )
+        func = prefix_hamilton_filter_log_map[prefix]
+        func(
+            nobs,
+            k_regimes,
+            order,
+            log_transition,
+            conditional_loglikelihoods.reshape(k_regimes ** (order + 1), nobs),
+            joint_loglikelihoods,
+            predicted_joint_probabilities.reshape(
+                k_regimes ** (order + 1), nobs
+            ),
+            filtered_joint_probabilities.reshape(
+                k_regimes ** (order + 1), nobs + 1
+            ),
+        )
+
+        predicted_joint_probabilities_log = predicted_joint_probabilities
+        filtered_joint_probabilities_log = filtered_joint_probabilities
+
+        predicted_joint_probabilities = np.exp(predicted_joint_probabilities)
+        filtered_joint_probabilities = np.exp(filtered_joint_probabilities)
+
+        filtered_marginal_probabilities = filtered_joint_probabilities[
+            ..., 1:
+        ]
+        for i in range(1, filtered_marginal_probabilities.ndim - 1):
+            filtered_marginal_probabilities = np.sum(
+                filtered_marginal_probabilities, axis=-2
+            )
+        # --- end cy_hamilton_filter_log logic ---
+
+        return (
+            regime_transition,
+            initial_probabilities,
+            conditional_loglikelihoods,
+            filtered_marginal_probabilities,
+            predicted_joint_probabilities,
+            joint_loglikelihoods,
+            filtered_joint_probabilities[..., 1:],
+            predicted_joint_probabilities_log,
+            filtered_joint_probabilities_log[..., 1:],
+        )
+
+    def _smooth(
+        self,
+        params: NDArray[Any],
+        predicted_joint_probabilities_log: NDArray[Any],
+        filtered_joint_probabilities_log: NDArray[Any],
+        regime_transition: NDArray[Any] | None = None,
+    ) -> tuple[NDArray[Any], NDArray[Any]]:
+        if not self._restrictions:
+            return super()._smooth(  # type: ignore[misc]
+                params,
+                predicted_joint_probabilities_log,
+                filtered_joint_probabilities_log,
+                regime_transition,
+            )
+
+        if regime_transition is None:
+            regime_transition = self.regime_transition_matrix(params)  # type: ignore[attr-defined]
+
+        # --- begin cy_kim_smoother_log logic with restricted log ---
+        k_regimes = filtered_joint_probabilities_log.shape[0]
+        nobs = filtered_joint_probabilities_log.shape[-1]
+        order = filtered_joint_probabilities_log.ndim - 2
+        dtype = filtered_joint_probabilities_log.dtype
+
+        smoothed_joint_probabilities = np.zeros(
+            (k_regimes,) * (order + 1) + (nobs,), dtype=dtype
+        )
+
+        if regime_transition.shape[-1] == nobs + order:
+            regime_transition = regime_transition[..., order:]
+
+        log_transition = self._restricted_log_transition(regime_transition)
+
+        prefix, dtype_blas, _ = find_best_blas_type(
+            (
+                log_transition,
+                predicted_joint_probabilities_log,
+                filtered_joint_probabilities_log,
+            )
+        )
+        func = prefix_kim_smoother_log_map[prefix]
+        func(
+            nobs,
+            k_regimes,
+            order,
+            log_transition,
+            predicted_joint_probabilities_log.reshape(
+                k_regimes ** (order + 1), nobs
+            ),
+            filtered_joint_probabilities_log.reshape(
+                k_regimes ** (order + 1), nobs
+            ),
+            smoothed_joint_probabilities.reshape(
+                k_regimes ** (order + 1), nobs
+            ),
+        )
+
+        smoothed_joint_probabilities = np.exp(smoothed_joint_probabilities)
+
+        smoothed_marginal_probabilities = smoothed_joint_probabilities
+        for i in range(1, smoothed_marginal_probabilities.ndim - 1):
+            smoothed_marginal_probabilities = np.sum(
+                smoothed_marginal_probabilities, axis=-2
+            )
+        # --- end cy_kim_smoother_log logic ---
+
+        return smoothed_joint_probabilities, smoothed_marginal_probabilities
+
+
+class _RestrictedSMMarkovRegression(_RestrictedFilterMixin, SMMarkovRegression):
     """statsmodels MarkovRegression with restricted transition probabilities.
 
     Overrides transform_params/untransform_params to enforce fixed values
-    in the transition matrix.
+    in the transition matrix.  Also overrides _filter/_smooth to use a strict
+    log-zero that prevents probability leakage through forbidden transitions.
 
     Parameters
     ----------
@@ -119,15 +327,14 @@ class _RestrictedSMMarkovRegression(SMMarkovRegression):
         if not self._restrictions:
             return constrained
 
-        # The transition params are the last k*(k-1) entries
+        # The transition params are the first k*(k-1) entries (statsmodels convention)
         k = self.k_regimes
         n_tp = k * (k - 1)
-        n_other = len(constrained) - n_tp
 
         # Reconstruct transition matrix from the constrained params
         # statsmodels stores transition params column by column, k-1 per col
-        tp_start = n_other
-        tp = constrained[tp_start:]
+        tp_start = 0
+        tp = constrained[tp_start:tp_start + n_tp]
 
         # Rebuild the full transition matrix
         P = np.zeros((k, k))
@@ -183,12 +390,15 @@ class _RestrictedSMMarkovRegression(SMMarkovRegression):
             new_tp[idx : idx + k - 1] = P[: k - 1, j]
             idx += k - 1
 
-        constrained[tp_start:] = new_tp
+        constrained[tp_start:tp_start + n_tp] = new_tp
         return constrained
 
 
-class _RestrictedSMMarkovAutoregression(MarkovAutoregression):
-    """statsmodels MarkovAutoregression with restricted transition probabilities."""
+class _RestrictedSMMarkovAutoregression(_RestrictedFilterMixin, MarkovAutoregression):
+    """statsmodels MarkovAutoregression with restricted transition probabilities.
+
+    Inherits filter/smooth overrides from _RestrictedFilterMixin.
+    """
 
     def __init__(
         self,
@@ -222,9 +432,8 @@ class _RestrictedSMMarkovAutoregression(MarkovAutoregression):
 
         k = self.k_regimes
         n_tp = k * (k - 1)
-        n_other = len(constrained) - n_tp
-        tp_start = n_other
-        tp = constrained[tp_start:]
+        tp_start = 0
+        tp = constrained[tp_start:tp_start + n_tp]
 
         P = np.zeros((k, k))
         idx = 0
@@ -270,7 +479,7 @@ class _RestrictedSMMarkovAutoregression(MarkovAutoregression):
             new_tp[idx : idx + k - 1] = P[: k - 1, j]
             idx += k - 1
 
-        constrained[tp_start:] = new_tp
+        constrained[tp_start:tp_start + n_tp] = new_tp
         return constrained
 
 
