@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-*No unreleased changes.*
+### Fixed
+
+- **Smoothed probability leakage in restricted Markov models**: statsmodels' Hamilton filter and Kim smoother convert zero transition probabilities to `log(max(0, 1e-20)) ≈ -46`, which leaks ~1e-20 probability per step. Over many time steps with strong data, this accumulates and overwhelms transition restrictions, causing non-recurring models to show impossible regime reversals. Added `_RestrictedFilterMixin` that overrides `_filter`/`_smooth` in both restricted statsmodels subclasses with `_LOG_ZERO = -1000` to eliminate leakage. 3 new tests verify smoothed probability monotonicity (880 tests total).
 
 ## [0.3.0] - 2026-02-19
 
