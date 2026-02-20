@@ -23,7 +23,9 @@ if TYPE_CHECKING:
     import pandas as pd
     from numpy.typing import ArrayLike, NDArray
 
+    from regimes.markov.results import MarkovARResults
     from regimes.rolling.ar import RecursiveAR, RollingAR
+    from regimes.tests.andrews_ploberger import AndrewsPlobergerResults
     from regimes.tests.bai_perron import BaiPerronResults
     from regimes.tests.chow import ChowTestResults
     from regimes.tests.cusum import CUSUMResults, CUSUMSQResults
@@ -1049,6 +1051,46 @@ class AR(TimeSeriesModelBase):
         test = CUSUMSQTest.from_model(self)
         return test.fit(significance=significance)
 
+    def andrews_ploberger(
+        self,
+        break_vars: Literal["all", "const"] = "all",
+        trimming: float = 0.15,
+        significance: float = 0.05,
+    ) -> AndrewsPlobergerResults:
+        """Test for a structural break at unknown date using Andrews-Ploberger.
+
+        Convenience method that creates an AndrewsPlobergerTest from this
+        AR model and runs it. The test uses the effective sample (after
+        dropping initial observations for lags).
+
+        Parameters
+        ----------
+        break_vars : "all" | "const"
+            Which variables can have breaks:
+            - "all": All regressors can break (default), including constant
+              and AR parameters
+            - "const": Only intercept can break (mean-shift model)
+        trimming : float
+            Fraction of observations trimmed from each end. Default is 0.15.
+        significance : float
+            Significance level for rejection decisions. Default is 0.05.
+
+        Returns
+        -------
+        AndrewsPlobergerResults
+            Test results with SupF, ExpF, AveF statistics and decisions.
+
+        See Also
+        --------
+        AndrewsPlobergerTest : The underlying test class.
+        chow_test : Test at known break points.
+        bai_perron : Test for multiple breaks.
+        """
+        from regimes.tests.andrews_ploberger import AndrewsPlobergerTest
+
+        test = AndrewsPlobergerTest.from_model(self, break_vars=break_vars)
+        return test.fit(trimming=trimming, significance=significance)
+
     def rolling(self, window: int) -> RollingAR:
         """Create a rolling AR estimator from this model.
 
@@ -1120,6 +1162,42 @@ class AR(TimeSeriesModelBase):
         from regimes.rolling.ar import RecursiveAR
 
         return RecursiveAR.from_model(self, min_nobs=min_nobs)
+
+    def markov_switching(
+        self,
+        k_regimes: int = 2,
+        **kwargs: Any,
+    ) -> MarkovARResults:
+        """Fit a Markov regime-switching version of this AR model.
+
+        Creates a MarkovAR from this model's specification and fits it.
+
+        Parameters
+        ----------
+        k_regimes : int
+            Number of regimes. Default is 2.
+        **kwargs
+            Additional keyword arguments. Model-level kwargs (e.g.,
+            switching_ar, switching_trend) forwarded to MarkovAR;
+            fit-level kwargs (method, maxiter, etc.) forwarded to fit().
+
+        Returns
+        -------
+        MarkovARResults
+            Fitted Markov switching AR results.
+
+        See Also
+        --------
+        regimes.markov.MarkovAR : The underlying MS AR model class.
+        """
+        from regimes.markov import MarkovAR
+
+        fit_kwargs_names = {"method", "maxiter", "em_iter", "search_reps"}
+        model_kwargs = {k: v for k, v in kwargs.items() if k not in fit_kwargs_names}
+        fit_kwargs = {k: v for k, v in kwargs.items() if k in fit_kwargs_names}
+
+        ms_model = MarkovAR.from_model(self, k_regimes=k_regimes, **model_kwargs)
+        return ms_model.fit(**fit_kwargs)
 
 
 def ar_summary_by_regime(

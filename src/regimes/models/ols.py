@@ -25,7 +25,9 @@ if TYPE_CHECKING:
     import pandas as pd
     from numpy.typing import ArrayLike, NDArray
 
+    from regimes.markov.results import MarkovRegressionResults
     from regimes.rolling.ols import RecursiveOLS, RollingOLS
+    from regimes.tests.andrews_ploberger import AndrewsPlobergerResults
     from regimes.tests.bai_perron import BaiPerronResults
     from regimes.tests.chow import ChowTestResults
     from regimes.tests.cusum import CUSUMResults, CUSUMSQResults
@@ -857,6 +859,44 @@ class OLS(RegimesModelBase):
         test = CUSUMSQTest.from_model(self)
         return test.fit(significance=significance)
 
+    def andrews_ploberger(
+        self,
+        break_vars: Literal["all", "const"] = "all",
+        trimming: float = 0.15,
+        significance: float = 0.05,
+    ) -> AndrewsPlobergerResults:
+        """Test for a structural break at unknown date using Andrews-Ploberger.
+
+        Convenience method that creates an AndrewsPlobergerTest from this
+        model and runs it. Reports SupF, ExpF, and AveF statistics.
+
+        Parameters
+        ----------
+        break_vars : "all" | "const"
+            Which variables can have breaks:
+            - "all": All regressors can break (default)
+            - "const": Only intercept can break (mean-shift model)
+        trimming : float
+            Fraction of observations trimmed from each end. Default is 0.15.
+        significance : float
+            Significance level for rejection decisions. Default is 0.05.
+
+        Returns
+        -------
+        AndrewsPlobergerResults
+            Test results with SupF, ExpF, AveF statistics and decisions.
+
+        See Also
+        --------
+        AndrewsPlobergerTest : The underlying test class.
+        chow_test : Test at known break points.
+        bai_perron : Test for multiple breaks.
+        """
+        from regimes.tests.andrews_ploberger import AndrewsPlobergerTest
+
+        test = AndrewsPlobergerTest.from_model(self, break_vars=break_vars)
+        return test.fit(trimming=trimming, significance=significance)
+
     def rolling(self, window: int) -> RollingOLS:
         """Create a rolling OLS estimator from this model.
 
@@ -926,6 +966,60 @@ class OLS(RegimesModelBase):
         from regimes.rolling.ols import RecursiveOLS
 
         return RecursiveOLS.from_model(self, min_nobs=min_nobs)
+
+    def markov_switching(
+        self,
+        k_regimes: int = 2,
+        **kwargs: Any,
+    ) -> MarkovRegressionResults:
+        """Fit a Markov regime-switching version of this OLS model.
+
+        Creates a MarkovRegression from this model's specification and
+        fits it. This is a convenience method for one-way mapping from
+        OLS to Markov switching.
+
+        Parameters
+        ----------
+        k_regimes : int
+            Number of regimes. Default is 2.
+        **kwargs
+            Additional keyword arguments passed to MarkovRegression and
+            its fit() method. Model-level kwargs (e.g., switching_trend,
+            switching_exog) are forwarded to MarkovRegression; fit-level
+            kwargs (e.g., method, maxiter, em_iter, search_reps) are
+            forwarded to fit().
+
+        Returns
+        -------
+        MarkovRegressionResults
+            Fitted Markov switching regression results.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> from regimes import OLS
+        >>> np.random.seed(42)
+        >>> y = np.concatenate([np.random.randn(100), np.random.randn(100) + 3])
+        >>> X = np.column_stack([np.ones(200), np.random.randn(200)])
+        >>> model = OLS(y, X, has_constant=False)
+        >>> ms_results = model.markov_switching(k_regimes=2)
+        >>> print(ms_results.summary())
+
+        See Also
+        --------
+        regimes.markov.MarkovRegression : The underlying MS model class.
+        """
+        from regimes.markov import MarkovRegression
+
+        # Separate model-level kwargs from fit-level kwargs
+        fit_kwargs_names = {"method", "maxiter", "em_iter", "search_reps"}
+        model_kwargs = {k: v for k, v in kwargs.items() if k not in fit_kwargs_names}
+        fit_kwargs = {k: v for k, v in kwargs.items() if k in fit_kwargs_names}
+
+        ms_model = MarkovRegression.from_model(
+            self, k_regimes=k_regimes, **model_kwargs
+        )
+        return ms_model.fit(**fit_kwargs)
 
 
 def summary_by_regime(

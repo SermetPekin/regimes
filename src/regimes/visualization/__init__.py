@@ -1,5 +1,6 @@
 """Visualization utilities for structural break analysis."""
 
+from regimes.visualization.andrews_ploberger import plot_f_sequence
 from regimes.visualization.breaks import (
     plot_break_confidence,
     plot_breaks,
@@ -12,6 +13,13 @@ from regimes.visualization.diagnostics import (
     plot_residual_acf,
     plot_residual_distribution,
     plot_scaled_residuals,
+)
+from regimes.visualization.markov import (
+    plot_ic,
+    plot_parameter_time_series,
+    plot_regime_shading,
+    plot_smoothed_probabilities,
+    plot_transition_matrix,
 )
 from regimes.visualization.params import plot_params_over_time
 from regimes.visualization.rolling import plot_rolling_coefficients
@@ -42,12 +50,18 @@ __all__ = [
     "plot_cusum",
     "plot_cusum_sq",
     "plot_diagnostics",
+    "plot_f_sequence",
+    "plot_ic",
+    "plot_parameter_time_series",
     "plot_params_over_time",
     "plot_regime_means",
+    "plot_regime_shading",
     "plot_residual_acf",
     "plot_residual_distribution",
     "plot_rolling_coefficients",
     "plot_scaled_residuals",
+    "plot_smoothed_probabilities",
+    "plot_transition_matrix",
     "set_style",
     "shade_regimes",
     "use_style",

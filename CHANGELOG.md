@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Smoothed probability leakage in restricted Markov models**: statsmodels' Hamilton filter and Kim smoother convert zero transition probabilities to `log(max(0, 1e-20)) ≈ -46`, which leaks ~1e-20 probability per step. Over many time steps with strong data, this accumulates and overwhelms transition restrictions, causing non-recurring models to show impossible regime reversals. Added `_RestrictedFilterMixin` that overrides `_filter`/`_smooth` in both restricted statsmodels subclasses with `_LOG_ZERO = -1000` to eliminate leakage. 3 new tests verify smoothed probability monotonicity (880 tests total).
+
+## [0.3.0] - 2026-02-19
+
 ### Added
 
 - **GitHub repository**: Published at [github.com/knightianuncertainty/regimes](https://github.com/knightianuncertainty/regimes)
@@ -29,6 +35,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `.cusum_test()` and `.cusum_sq_test()` convenience methods on OLS, AR, and ADL models
   - `.plot()` convenience method on results objects
   - 74 new tests (662 total)
+- **Andrews-Ploberger test for structural breaks at unknown date**
+  - `AndrewsPlobergerTest` class with SupF, ExpF, and AveF statistics (Andrews, 1993; Andrews & Ploberger, 1994)
+  - `AndrewsPlobergerResults` dataclass with critical values, coarse p-values, and F-sequence
+  - Critical value tables for q=1–10, trimming 0.05–0.20
+  - `plot_f_sequence()` visualization function for F-statistic path
+  - `AndrewsPlobergerTest.from_model()` class method for OLS, AR, and ADL models
+  - `.andrews_ploberger()` convenience method on OLS, AR, and ADL models
+  - 56 new tests (718 total)
+- **Markov regime-switching models**
+  - `MarkovRegression` class wrapping `statsmodels.tsa.regime_switching.MarkovRegression` with regime ordering, multi-start optimization, and regimes-style results
+  - `MarkovAR` class wrapping `statsmodels.tsa.regime_switching.MarkovAutoregression` with switching AR coefficients
+  - `MarkovADL` class: Markov switching ADL model (builds ADL design matrix and passes to statsmodels `MarkovRegression`)
+  - `MarkovSwitchingResultsBase`, `MarkovRegressionResults`, `MarkovARResults`, `MarkovADLResults` dataclasses with transition matrix, smoothed/filtered/predicted probabilities, expected durations, regime assignments, and information criteria
+  - `RestrictedMarkovRegression` and `RestrictedMarkovAR` for imposing fixed transition probability entries via softmax redistribution
+  - `RestrictedMarkovRegression.non_recurring()` / `RestrictedMarkovAR.non_recurring()` factory methods for Chib (1998) upper-triangular non-recurring transition structure
+  - `NonRecurringRegimeTest`: LR test of H0 (non-recurring structural break) vs H1 (unrestricted Markov switching) with chi-bar-squared or bootstrap p-values
+  - `SequentialRestrictionTest`: GETS-style algorithm for sequentially restricting transition probabilities with Holm-Bonferroni multiple testing correction
+  - `RegimeNumberSelection`: select number of regimes K by information criteria (AIC/BIC/HQIC) or sequential LRT, with K=1 using standard OLS/AR
+  - 5 Markov visualization functions: `plot_smoothed_probabilities`, `plot_regime_shading`, `plot_transition_matrix`, `plot_parameter_time_series`, `plot_ic`
+  - `.markov_switching(k_regimes)` convenience method on `OLS`, `AR`, and `ADL` for one-step conversion to Markov switching
+  - `MarkovRegression.from_model()`, `MarkovAR.from_model()`, `MarkovADL.from_model()` class methods for explicit construction from existing models
+  - 98 new tests (816 total)
+- **Example notebooks**: Replaced monolithic `exploration.ipynb` with 4 focused notebooks
+  - `01_models_and_visualization.ipynb` — OLS, AR, visualization, diagnostics
+  - `02_structural_break_tests.ipynb` — Bai-Perron, Chow, CUSUM, Andrews-Ploberger
+  - `03_dynamic_estimation.ipynb` — Rolling/recursive estimation, ADL models
+  - `04_markov_switching.ipynb` — Full Markov switching API demonstration
+- **Expanded test coverage**: Additional edge case and integration tests (877 tests total, 86% coverage)
+  - Markov regression, AR, utils, restricted, selection, sequential restriction tests
+  - Results base class tests
+  - Markov visualization tests
 
 ### Changed
 

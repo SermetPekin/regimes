@@ -32,7 +32,9 @@ if TYPE_CHECKING:
     import pandas as pd
     from numpy.typing import ArrayLike, NDArray
 
+    from regimes.markov.results import MarkovADLResults
     from regimes.rolling.adl import RecursiveADL, RollingADL
+    from regimes.tests.andrews_ploberger import AndrewsPlobergerResults
     from regimes.tests.bai_perron import BaiPerronResults
     from regimes.tests.chow import ChowTestResults
     from regimes.tests.cusum import CUSUMResults, CUSUMSQResults
@@ -1179,6 +1181,45 @@ class ADL(RegimesModelBase):
         test = CUSUMSQTest.from_model(self)
         return test.fit(significance=significance)
 
+    def andrews_ploberger(
+        self,
+        break_vars: Literal["all", "const"] = "all",
+        trimming: float = 0.15,
+        significance: float = 0.05,
+    ) -> AndrewsPlobergerResults:
+        """Test for a structural break at unknown date using Andrews-Ploberger.
+
+        Convenience method that creates an AndrewsPlobergerTest from this
+        ADL model and runs it. The test uses the effective sample (after
+        dropping initial observations for lags).
+
+        Parameters
+        ----------
+        break_vars : "all" | "const"
+            Which variables can have breaks:
+            - "all": All regressors can break (default)
+            - "const": Only intercept can break (mean-shift model)
+        trimming : float
+            Fraction of observations trimmed from each end. Default is 0.15.
+        significance : float
+            Significance level for rejection decisions. Default is 0.05.
+
+        Returns
+        -------
+        AndrewsPlobergerResults
+            Test results with SupF, ExpF, AveF statistics and decisions.
+
+        See Also
+        --------
+        AndrewsPlobergerTest : The underlying test class.
+        chow_test : Test at known break points.
+        bai_perron : Test for multiple breaks.
+        """
+        from regimes.tests.andrews_ploberger import AndrewsPlobergerTest
+
+        test = AndrewsPlobergerTest.from_model(self, break_vars=break_vars)
+        return test.fit(trimming=trimming, significance=significance)
+
     def rolling(self, window: int) -> RollingADL:
         """Create a rolling ADL estimator from this model.
 
@@ -1212,6 +1253,41 @@ class ADL(RegimesModelBase):
         from regimes.rolling.adl import RecursiveADL
 
         return RecursiveADL.from_model(self, min_nobs=min_nobs)
+
+    def markov_switching(
+        self,
+        k_regimes: int = 2,
+        **kwargs: Any,
+    ) -> MarkovADLResults:
+        """Fit a Markov regime-switching version of this ADL model.
+
+        Creates a MarkovADL from this model's specification and fits it.
+
+        Parameters
+        ----------
+        k_regimes : int
+            Number of regimes. Default is 2.
+        **kwargs
+            Additional keyword arguments. Model-level kwargs forwarded
+            to MarkovADL; fit-level kwargs forwarded to fit().
+
+        Returns
+        -------
+        MarkovADLResults
+            Fitted Markov switching ADL results.
+
+        See Also
+        --------
+        regimes.markov.MarkovADL : The underlying MS ADL model class.
+        """
+        from regimes.markov import MarkovADL
+
+        fit_kwargs_names = {"method", "maxiter", "em_iter", "search_reps"}
+        model_kwargs = {k: v for k, v in kwargs.items() if k not in fit_kwargs_names}
+        fit_kwargs = {k: v for k, v in kwargs.items() if k in fit_kwargs_names}
+
+        ms_model = MarkovADL.from_model(self, k_regimes=k_regimes, **model_kwargs)
+        return ms_model.fit(**fit_kwargs)
 
 
 def adl_summary_by_regime(
